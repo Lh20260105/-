@@ -5,13 +5,20 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
 
-
 @TableName("user") // 对应数据库的 user 表
 public class User {
     @TableId(type = IdType.AUTO)
     private Long id;
     private String username;
     private String password;
+    private String role; // 角色：ADMIN 或 USER
+    private LocalDateTime createTime;
+
+    // --- 【核心新增字段】 ---
+    private String nickname;  // 用户昵称
+    private String avatarUrl; // 头像图片地址
+
+    // --- Getter 和 Setter 方法 ---
 
     public Long getId() {
         return id;
@@ -53,6 +60,21 @@ public class User {
         this.createTime = createTime;
     }
 
-    private String role; // 角色：ADMIN 或 USER
-    private LocalDateTime createTime;
+    // --- 【新增字段的 Getter/Setter】 ---
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
 }

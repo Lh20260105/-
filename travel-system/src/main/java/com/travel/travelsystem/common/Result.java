@@ -1,35 +1,43 @@
 package com.travel.travelsystem.common;
 
 /**
- * 这是一个统一的返回结果包装类
- * 用来告诉前端：操作是否成功、错误信息是什么、数据在哪里
+ * 统一返回结果类
  */
 public class Result<T> {
-    private Boolean success; // 是否成功
-    private String message;  // 提示信息
-    private T data;          // 携带的数据
+    private Boolean success; // 是否成功 (true/false)
+    private String message;  // 提示消息
+    private T data;          // 返回的数据
 
-    // 构造方法
+    // 1. 无参构造方法 (必须保留)
     public Result() {}
 
-    // 成功的静态方法
-    public static <T> Result<T> success(T data, String msg) {
-        Result<T> result = new Result<>();
-        result.setSuccess(true);
-        result.setData(data);
-        result.setMessage(msg);
-        return result;
+    // 2. 全参构造方法：解决你图片里 new Result(...) 报红的问题
+    public Result(Boolean success, String message, T data) {
+        this.success = success;
+        this.message = message;
+        this.data = data;
     }
 
-    // 失败的静态方法
-    public static <T> Result<T> error(String msg) {
-        Result<T> result = new Result<>();
-        result.setSuccess(false);
-        result.setMessage(msg);
-        return result;
+    // --- 静态调用方法 ---
+
+    // 成功：只传数据 (你会用在详情接口)
+    public static <T> Result<T> success(T data) {
+        // 这里用 true 代替之前的 200，因为字段类型是 Boolean
+        return new Result<>(true, "操作成功", data);
     }
 
-    // --- Getter 和 Setter (必须要有，否则前端拿不到数据) ---
+    // 成功：传数据 + 自定义消息 (你会用在发布接口)
+    public static <T> Result<T> success(T data, String message) {
+        return new Result<>(true, message, data);
+    }
+
+    // 失败
+    public static <T> Result<T> error(String message) {
+        return new Result<>(false, message, null);
+    }
+
+    // --- Getter 和 Setter (必须保留，否则前端无法解析 JSON) ---
+
     public Boolean getSuccess() { return success; }
     public void setSuccess(Boolean success) { this.success = success; }
 

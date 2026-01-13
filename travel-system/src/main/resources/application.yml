@@ -3,23 +3,23 @@ server:
 
 spring:
   datasource:
-    # 数据库连接配置：确保数据库名是 travel_system
     url: jdbc:mysql://localhost:3306/travel_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
-    password: 123456 # 请确保这与你的 MySQL 密码一致
+    password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+# --- MyBatis-Plus 配置 (必须在最左侧顶格) ---
 mybatis-plus:
   configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 在控制台打印 SQL 方便调试
+    # 核心：开启这个，数据库的 image_url 才会自动给 Java 的 imageUrl 赋值
+    map-underscore-to-camel-case: true
+    # 打印 SQL 日志方便你排查
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
-      id-type: auto # 数据库主键自增
+      id-type: auto
 
-# --- 重点：下面是你新增的配置 ---
+# --- 文件上传配置 (同样顶格) ---
 file:
-  # 图片保存在电脑的具体位置。注意：路径最后一定要加斜杠 /
-  # 如果你的电脑没有 D 盘，请改成 C:/travel/files/
-  upload-path: D:/travel/files/
-
-
+  # 确保这个路径下真的有你的图片文件
+  upload-path: D:/travel2/travel-system/files/

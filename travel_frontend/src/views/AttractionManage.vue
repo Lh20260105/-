@@ -11,7 +11,13 @@
       <el-table-column prop="id" label="ID" width="60" align="center" />
       <el-table-column label="预览图" width="120" align="center">
         <template #default="scope">
-          <el-image :src="scope.row.imageUrl" style="width: 80px; height: 50px" fit="cover" />
+          <el-image 
+            :src="scope.row.imageUrl" 
+            style="width: 80px; height: 50px; border-radius: 4px" 
+            fit="cover" 
+            :preview-src-list="[scope.row.imageUrl]"
+            preview-teleported
+          />
         </template>
       </el-table-column>
       <el-table-column prop="name" label="景点名称" />
@@ -50,13 +56,14 @@
         <el-form-item label="景点照片">
           <el-upload
             class="avatar-uploader"
-            action="http://localhost:8080/api/attractions/upload"
+            action="/api/files/upload"
             :show-file-list="false"
             :on-success="handleUploadSuccess"
           >
             <img v-if="form.imageUrl" :src="form.imageUrl" class="uploaded-img" />
             <el-icon v-else class="uploader-icon"><Plus /></el-icon>
           </el-upload>
+          <div style="font-size: 12px; color: #999; margin-top: 5px;">建议图片大小不超过 2MB</div>
         </el-form-item>
 
         <el-form-item label="景点描述">
@@ -73,8 +80,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '../utils/request'
+import request from '../utils/request' // 确保路径正确
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 
 const attractionList = ref([])
 const loading = ref(false)
@@ -94,6 +102,7 @@ const form = ref({
 // 加载数据
 const loadData = async () => {
   loading.value = true
+  // 注意：确保后端对应 @GetMapping("/list")
   const res = await request.get('/attractions/list')
   if (res.data.success) {
     attractionList.value = res.data.data
@@ -103,13 +112,16 @@ const loadData = async () => {
 
 // 图片上传成功的回调
 const handleUploadSuccess = (res) => {
+  // 后端 Result 类返回的是 success
   if (res.success) {
-    form.value.imageUrl = res.data // 获取后端返回的 URL
+    form.value.imageUrl = res.data // 获取后端 FileController 返回的完整 URL
     ElMessage.success('照片上传成功')
+  } else {
+    ElMessage.error(res.message || '上传失败')
   }
 }
 
-// 打开弹窗并重置表单
+// 打开弹窗并重制表单
 const openAddDialog = () => {
   form.value = { name: '', location: '', category: '', ticketPrice: 0, openTime: '', imageUrl: '', description: '' }
   dialogVisible.value = true
@@ -124,14 +136,29 @@ const submitForm = async () => {
   if (res.data.success) {
     ElMessage.success('景点添加成功！')
     dialogVisible.value = false
-    loadData()
+    loadData() // 刷新列表
   }
 }
 
+// 【修复后的删除逻辑】
 const handleDelete = (id) => {
-  ElMessageBox.confirm('确定删除吗？', '警告').then(async () => {
-    const res = await request.delete(`/attractions/delete/${id}`)
-    if (res.data.success) { ElMessage.success('已删除'); loadData(); }
+  ElMessageBox.confirm('确定要永久删除该景点吗？', '系统提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    // 【关键】：路径去掉 /delete，改为标准的 RESTful 风格
+    // 后端对应的是 @DeleteMapping("/{id}")
+    const res = await request.delete(`/attractions/${id}`)
+    
+    if (res.data.success) { 
+      ElMessage.success('已成功删除景点')
+      loadData() // 重新加载数据
+    } else {
+      ElMessage.error(res.data.message || '删除失败')
+    }
+  }).catch(() => {
+    // 点击取消不执行任何操作
   })
 }
 
@@ -149,6 +176,10 @@ onMounted(loadData)
   justify-content: center;
   align-items: center;
   overflow: hidden;
+  background-color: #fafafa;
+}
+.avatar-uploader:hover {
+  border-color: #409EFF;
 }
 .uploaded-img {
   width: 100%;

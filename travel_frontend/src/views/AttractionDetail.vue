@@ -5,8 +5,8 @@
     <div class="detail-content" v-if="attraction.id">
       <el-row :gutter="40">
         <el-col :md="12">
-          <el-image :src="attraction.imageUrl" class="main-image" fit="cover">
-            <template #error><div class="image-slot">暂无图片</div></template>
+          <el-image ::src="attraction.imageUrl || attraction.image_url" class="main-image" fit="cover">
+            <template #error><div class="image-slot">暂无图片 (URL: {{ attraction.imageUrl }})</div></template>
           </el-image>
         </el-col>
         
@@ -72,12 +72,13 @@ const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}')
 
 const loadDetail = async () => {
   const id = route.params.id
-  const res = await request.get(`/attractions/${id}`)
+ const res = await request.get(`/attractions/${id}`)
   if (res.data.success) {
+    // 【技巧】：打印一下看后端到底传回了什么字段
+    console.log("详情数据：", res.data.data) 
     attraction.value = res.data.data
   }
 }
-
 // 收藏逻辑
 const handleCollect = async () => {
   if (!userInfo.id) return ElMessage.warning('请先登录')
