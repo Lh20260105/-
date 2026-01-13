@@ -1,0 +1,25 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    # 数据库连接配置：确保数据库名是 travel_system
+    url: jdbc:mysql://localhost:3306/travel_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456 # 请确保这与你的 MySQL 密码一致
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 在控制台打印 SQL 方便调试
+  global-config:
+    db-config:
+      id-type: auto # 数据库主键自增
+
+# --- 重点：下面是你新增的配置 ---
+file:
+  # 图片保存在电脑的具体位置。注意：路径最后一定要加斜杠 /
+  # 如果你的电脑没有 D 盘，请改成 C:/travel/files/
+  upload-path: D:/travel/files/
+
+
