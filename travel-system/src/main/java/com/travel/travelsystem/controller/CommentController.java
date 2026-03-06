@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/comment") // 对应前端的 /api/comment
+@RequestMapping("/api/comment")
 public class CommentController {
 
     @Autowired
@@ -22,7 +22,6 @@ public class CommentController {
     @Autowired
     private UserService userService;
 
-    // 1. 发布评论：对应前端 request.post('/comment/add', ...)
     @PostMapping("/add")
     public Result add(@RequestBody ForumComment comment) {
         comment.setCreateTime(LocalDateTime.now());
@@ -30,22 +29,31 @@ public class CommentController {
         return saved ? Result.success(null, "评论成功") : Result.error("评论失败");
     }
 
-    // 2. 获取评论列表：对应前端 request.get(`/comment/list/${id}`)
     @GetMapping("/list/{postId}")
     public Result<List<ForumComment>> list(@PathVariable Long postId) {
         List<ForumComment> comments = commentService.list(
                 new QueryWrapper<ForumComment>().eq("post_id", postId).orderByDesc("create_time")
         );
 
-        // 为每一条评论补全评论人的名字和头像
         for (ForumComment c : comments) {
             User user = userService.getById(c.getUserId());
             if (user != null) {
-                // 如果没有昵称就用用户名
-                c.setNickname(user.getNickname() != null ? user.getNickname() : user.getUsername());
-                c.setAvatar(user.getAvatarUrl());
+                String nickname = user.getNickname() != null && !user.getNickname().isEmpty() 
+                    ? user.getNickname() : user.getUsername();
+                String avatar = user.getAvatarUrl();
+                
+                c.setNickname(nickname);
+                c.setAvatar(avatar);
+                
+                System.out.println(">>> [评论] 用户ID: " + c.getUserId() + ", 昵称: " + nickname + ", 头像: " + avatar);
             }
         }
         return Result.success(comments);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public Result delete(@PathVariable Long id) {
+        boolean removed = commentService.removeById(id);
+        return removed ? Result.success(null, "删除成功") : Result.error("删除失败");
     }
 }

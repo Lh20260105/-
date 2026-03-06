@@ -1,5 +1,6 @@
 package com.travel.travelsystem.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.travel.travelsystem.common.Result;
 import com.travel.travelsystem.entity.Attraction;
 import com.travel.travelsystem.entity.Favorite;
@@ -26,7 +27,6 @@ public class FavoriteController {
      */
     @PostMapping("/add")
     public Result<Object> add(@RequestBody Favorite favorite) {
-        // 校验是否已收藏
         Favorite exist = favoriteService.query()
                 .eq("user_id", favorite.getUserId())
                 .eq("attraction_id", favorite.getAttractionId())
@@ -43,18 +43,27 @@ public class FavoriteController {
      */
     @DeleteMapping("/remove")
     public Result<Object> remove(@RequestParam Long userId, @RequestParam Long attractionId) {
-        boolean ok = favoriteService.remove(
-                favoriteService.query()
-                        .eq("user_id", userId)
-                        .eq("attraction_id", attractionId)
-                        .getWrapper()
-        );
+        QueryWrapper<Favorite> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userId).eq("attraction_id", attractionId);
+        boolean ok = favoriteService.remove(queryWrapper);
+        System.out.println(">>> [取消收藏] userId=" + userId + ", attractionId=" + attractionId + ", 结果=" + ok);
         return ok ? Result.success(null, "已取消收藏") : Result.error("取消失败");
     }
 
     /**
+     * 检查是否已收藏
+     */
+    @GetMapping("/check")
+    public Result<Boolean> check(@RequestParam Long userId, @RequestParam Long attractionId) {
+        Favorite exist = favoriteService.query()
+                .eq("user_id", userId)
+                .eq("attraction_id", attractionId)
+                .one();
+        return Result.success(exist != null);
+    }
+
+    /**
      * 3. 获取当前用户收藏的所有景点 ID 列表
-     * 前端用这个列表来判断首页哪个按钮该变颜色
      */
     @GetMapping("/ids/{userId}")
     public Result<List<Long>> getFavoriteIds(@PathVariable Long userId) {

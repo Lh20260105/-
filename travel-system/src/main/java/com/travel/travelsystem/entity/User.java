@@ -1,6 +1,7 @@
 package com.travel.travelsystem.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
@@ -15,7 +16,9 @@ public class User {
     private LocalDateTime createTime;
 
     // --- 【核心新增字段】 ---
+    @TableField("nickname")
     private String nickname;  // 用户昵称
+    @TableField("avatar_url")
     private String avatarUrl; // 头像图片地址
 
     // --- Getter 和 Setter 方法 ---

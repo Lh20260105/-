@@ -1,105 +1,111 @@
 <template>
   <div class="itinerary-page">
-    <el-card class="modern-card main-header" shadow="never">
-      <div class="header-content">
-        <div class="title-group">
-          <div class="icon-circle">
-            <el-icon size="24" color="#409EFF"><Calendar /></el-icon>
+    <div class="noise-overlay"></div>
+    <div class="gradient-bg">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+    </div>
+
+    <div class="page-container">
+      <el-card class="main-header" shadow="never">
+        <div class="header-content">
+          <div class="title-group">
+            <div class="icon-circle">
+              <el-icon size="24"><Calendar /></el-icon>
+            </div>
+            <div class="text-info">
+              <span class="main-title">我的个人行程单</span>
+              <span class="sub-title">让每一步旅行都井然有序</span>
+            </div>
           </div>
-          <div class="text-info">
-            <span class="main-title">我的个人行程单</span>
-            <span class="sub-title">让每一步旅行都井然有序</span>
+          <el-button v-if="itineraryItems.length > 0" class="btn-export-modern" @click="exportToPDF">
+            <el-icon><Download /></el-icon>
+            <span>导出 PDF 手账</span>
+          </el-button>
+        </div>
+      </el-card>
+
+      <div id="pdf-content" class="pdf-container">
+        <div class="pdf-banner-modern">
+          <div class="banner-overlay">
+            <h1>{{ nickname || username }} 的旅行计划</h1>
+            <div class="banner-meta">
+              <span>📅 生成日期：{{ new Date().toLocaleDateString() }}</span>
+              <span class="divider">|</span>
+              <span>✨ 云游推荐系统</span>
+            </div>
           </div>
         </div>
-        <el-button v-if="itineraryItems.length > 0" class="btn-export-modern" @click="exportToPDF">
-          <el-icon><Download /></el-icon>
-          <span>导出 PDF 手账</span>
-        </el-button>
-      </div>
-    </el-card>
 
-    <div id="pdf-content" class="pdf-container">
-      <div class="pdf-banner-modern">
-        <div class="banner-overlay">
-          <h1>{{ nickname || username }} 的旅行计划</h1>
-          <div class="banner-meta">
-            <span>📅 生成日期：{{ new Date().toLocaleDateString() }}</span>
-            <span class="divider">|</span>
-            <span>✨ 云游推荐系统</span>
+        <div v-for="day in sortedDays" :key="day" class="day-wrapper">
+          <div class="day-sticky-header">
+            <div class="day-pill">
+              <span class="day-number">Day {{ day }}</span>
+              <span class="day-date">{{ calculateDate(day) }}</span>
+            </div>
+            
+            <div v-if="weatherData[day]" class="weather-pill">
+              <el-icon><PartlyCloudy /></el-icon>
+              <span>{{ weatherData[day].city }} · {{ weatherData[day].status }} · {{ weatherData[day].temp }}°C</span>
+            </div>
+            <div v-else class="weather-dot-loading">同步天气中...</div>
           </div>
-        </div>
-      </div>
 
-      <div v-for="day in sortedDays" :key="day" class="day-wrapper">
-        <div class="day-sticky-header">
-          <div class="day-pill">
-            <span class="day-number">Day {{ day }}</span>
-            <span class="day-date">{{ calculateDate(day) }}</span>
-          </div>
-          
-          <div v-if="weatherData[day]" class="weather-pill">
-            <el-icon><PartlyCloudy /></el-icon>
-            <span>{{ weatherData[day].city }} · {{ weatherData[day].status }} · {{ weatherData[day].temp }}°C</span>
-          </div>
-          <div v-else class="weather-dot-loading">同步天气中...</div>
-        </div>
-
-        <el-timeline class="custom-timeline">
-          <el-timeline-item
-            v-for="item in getItemsByDay(day)"
-            :key="item.id"
-            :timestamp="item.startTime ? item.startTime.substring(0, 5) : '--:--'"
-            placement="top"
-            type="primary"
-            class="timeline-node"
-          >
-            <el-card class="itinerary-item-glass-card" shadow="hover">
-              <div class="item-layout">
-                <div class="item-main">
-                  <div class="title-row">
-                    <h4 class="attraction-name">{{ item.attractionName }}</h4>
-                    <div class="tag-group">
-                      <el-tag size="small" effect="light" type="success" class="rounded-tag">
+          <el-timeline class="custom-timeline">
+            <el-timeline-item
+              v-for="item in getItemsByDay(day)"
+              :key="item.id"
+              :timestamp="item.startTime ? item.startTime.substring(0, 5) : '--:--'"
+              placement="top"
+              type="primary"
+              class="timeline-node"
+            >
+              <el-card class="itinerary-item-card" shadow="hover">
+                <div class="item-layout">
+                  <div class="item-main">
+                    <div class="title-row">
+                      <h4 class="attraction-name">{{ item.attractionName }}</h4>
+                      <el-tag size="small" effect="light" class="rounded-tag">
                         {{ item.stayDays || 1 }} 天行程
                       </el-tag>
                     </div>
+                    <div class="detail-row">
+                      <div class="location-box">
+                        <el-icon><Location /></el-icon>
+                        <span>{{ item.location }}</span>
+                      </div>
+                      <div class="time-range-box">
+                        <span class="time-tag">入住: {{ calculateDate(item.dayNumber) }}</span>
+                        <span class="arrow">→</span>
+                        <span class="time-tag">离店: {{ calculateDeparture(item.dayNumber, item.stayDays) }}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div class="detail-row">
-                    <div class="location-box">
-                      <el-icon><Location /></el-icon>
-                      <span>{{ item.location }}</span>
-                    </div>
-                    <div class="time-range-box">
-                      <span class="time-tag">入住: {{ calculateDate(item.dayNumber) }}</span>
-                      <span class="arrow">→</span>
-                      <span class="time-tag">离店: {{ calculateDeparture(item.dayNumber, item.stayDays) }}</span>
-                    </div>
+                  
+                  <div class="item-ops">
+                    <el-button class="op-btn edit" circle @click="openEditDialog(item)">
+                      <el-icon><Edit /></el-icon>
+                    </el-button>
+                    <el-button class="op-btn delete" circle @click="handleDelete(item.id)">
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
                   </div>
                 </div>
-                
-                <div class="item-ops">
-                  <el-button class="op-btn edit" circle @click="openEditDialog(item)">
-                    <el-icon><Edit /></el-icon>
-                  </el-button>
-                  <el-button class="op-btn delete" circle @click="handleDelete(item.id)">
-                    <el-icon><Delete /></el-icon>
-                  </el-button>
-                </div>
-              </div>
-            </el-card>
-          </el-timeline-item>
-        </el-timeline>
-      </div>
+              </el-card>
+            </el-timeline-item>
+          </el-timeline>
+        </div>
 
-      <el-empty v-if="itineraryItems.length === 0" description="这里还没有故事，去首页开启你的旅程吧" />
-      
-      <div class="pdf-footer-modern" v-if="itineraryItems.length > 0">
-        <div class="footer-line"></div>
-        <p>祝您旅途愉快，一路平安</p>
+        <el-empty v-if="itineraryItems.length === 0" description="这里还没有故事，去首页开启你的旅程吧" />
+        
+        <div class="pdf-footer-modern" v-if="itineraryItems.length > 0">
+          <div class="footer-line"></div>
+          <p>祝您旅途愉快，一路平安</p>
+        </div>
       </div>
     </div>
 
-    <el-dialog v-model="editDialogVisible" title="修改行程计划" width="440px" custom-class="modern-dialog">
+    <el-dialog v-model="editDialogVisible" title="修改行程计划" width="440px" class="modern-dialog">
       <el-form label-position="top" class="modern-form">
         <el-form-item label="当前景点">
           <div class="display-name">{{ editForm.attractionName }}</div>
@@ -137,7 +143,6 @@
 </template>
 
 <script setup>
-// JavaScript 逻辑保持不变，确保功能 100% 可用
 import { ref, onMounted, computed } from 'vue'
 import request from '../utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -254,154 +259,396 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-/* --- 全局背景与布局 --- */
 .itinerary-page {
-  padding: 40px 20px;
-  background-color: #f8fafc;
+  position: relative;
   min-height: 100vh;
-  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  padding: 24px;
 }
 
-/* --- 顶部卡片设计 --- */
-.main-header {
-  max-width: 1000px;
-  margin: 0 auto 30px;
-  border-radius: 20px;
-  background: white;
-  box-shadow: 0 4px 25px rgba(0,0,0,0.05) !important;
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.025;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
+
+.gradient-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+}
+
+.blob-1 {
+  width: 500px;
+  height: 500px;
+  background: #E76F51;
+  top: -200px;
+  right: -100px;
+  animation: blobMove1 20s ease-in-out infinite;
+}
+
+.blob-2 {
+  width: 400px;
+  height: 400px;
+  background: #F4A261;
+  bottom: -150px;
+  left: -100px;
+  animation: blobMove2 25s ease-in-out infinite;
+}
+
+@keyframes blobMove1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-30px, 40px) scale(1.05); }
+}
+
+@keyframes blobMove2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(0.95); }
+}
+
+.page-container {
+  position: relative;
+  z-index: 1;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.main-header {
+  margin-bottom: 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  border: none;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06) !important;
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
 }
-.title-group { display: flex; align-items: center; gap: 15px; }
+
+.title-group {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 .icon-circle {
-  background: #eff6ff;
+  background: linear-gradient(135deg, #E76F51, #F4A261);
   width: 50px;
   height: 50px;
-  border-radius: 15px;
+  border-radius: 14px;
   display: flex;
   justify-content: center;
   align-items: center;
+  color: white;
 }
-.main-title { font-size: 22px; font-weight: 800; color: #1e293b; display: block; }
-.sub-title { font-size: 13px; color: #94a3b8; }
+
+.main-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #264653;
+  display: block;
+}
+
+.sub-title {
+  font-size: 0.875rem;
+  color: #5a6c7d;
+}
 
 .btn-export-modern {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #E76F51, #F4A261);
   color: white;
   border: none;
   border-radius: 12px;
-  padding: 20px 25px;
+  padding: 12px 20px;
   font-weight: 600;
-  transition: all 0.3s;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .btn-export-modern:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 15px rgba(37,99,235,0.3);
+  box-shadow: 0 8px 20px rgba(231, 111, 81, 0.3);
   color: white;
 }
 
-/* --- 内容容器 --- */
 .pdf-container {
-  max-width: 1000px;
-  margin: 0 auto;
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
-/* --- Banner 样式 --- */
 .pdf-banner-modern {
-  height: 180px;
-  background: linear-gradient(120deg, #e0f2fe 0%, #dbeafe 100%);
+  height: 160px;
+  background: linear-gradient(135deg, #E76F51 0%, #F4A261 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
 }
-.banner-overlay h1 { font-size: 28px; color: #1e3a8a; margin: 0; font-weight: 900; }
-.banner-meta { margin-top: 10px; font-size: 14px; color: #64748b; display: flex; gap: 15px; justify-content: center; }
 
-/* --- 每日标题设计 --- */
-.day-wrapper { padding: 0 40px 40px; }
+.banner-overlay h1 {
+  font-size: 2rem;
+  color: white;
+  margin: 0;
+  font-weight: 700;
+}
+
+.banner-meta {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.day-wrapper {
+  padding: 0 32px 32px;
+}
+
 .day-sticky-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 30px 0 20px;
+  margin: 24px 0 16px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
+
 .day-pill {
-  background: #1e293b;
+  background: #264653;
   color: white;
   padding: 8px 20px;
   border-radius: 50px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
-.day-number { font-weight: 900; font-size: 16px; }
-.day-date { font-size: 14px; opacity: 0.8; }
+
+.day-number {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.day-date {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
 
 .weather-pill {
-  background: #fff7ed;
-  color: #c2410c;
-  padding: 6px 15px;
+  background: rgba(42, 157, 143, 0.1);
+  color: #2A9D8F;
+  padding: 6px 14px;
   border-radius: 50px;
-  font-size: 13px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(42, 157, 143, 0.2);
+}
+
+.custom-timeline :deep(.el-timeline-item__node) {
+  background: #E76F51;
+}
+
+.custom-timeline :deep(.el-timeline-item__tail) {
+  border-left: 2px solid rgba(231, 111, 81, 0.3);
+}
+
+.itinerary-item-card {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.itinerary-item-card:hover {
+  border-color: rgba(231, 111, 81, 0.3);
+  transform: translateX(4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.item-layout {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.attraction-name {
+  font-size: 1.1rem;
+  margin: 0;
+  color: #264653;
+  font-weight: 600;
+}
+
+.rounded-tag {
+  background: rgba(42, 157, 143, 0.1);
+  color: #2A9D8F;
+  border: none;
+  font-weight: 500;
+}
+
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.location-box {
+  font-size: 0.875rem;
+  color: #5a6c7d;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-range-box {
+  font-size: 0.8rem;
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid #ffedd5;
 }
 
-/* --- 行程卡片设计 --- */
-.itinerary-item-glass-card {
-  border: 1px solid #f1f5f9;
-  border-radius: 16px;
-  transition: all 0.3s;
+.time-tag {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #5a6c7d;
 }
-.itinerary-item-glass-card:hover {
-  border-color: #3b82f6;
-  background-color: #f8faff;
-  transform: translateX(5px);
+
+.arrow {
+  color: #ccc;
 }
-.item-layout { display: flex; justify-content: space-between; align-items: center; }
-.title-row { display: flex; align-items: center; gap: 15px; margin-bottom: 10px; }
-.attraction-name { font-size: 17px; margin: 0; color: #1e293b; }
-.rounded-tag { border-radius: 6px; font-weight: 600; }
 
-.detail-row { display: flex; flex-direction: column; gap: 8px; }
-.location-box { font-size: 13px; color: #64748b; display: flex; align-items: center; gap: 5px; }
-.time-range-box { font-size: 12px; display: flex; align-items: center; gap: 10px; }
-.time-tag { background: #f1f5f9; padding: 2px 8px; border-radius: 4px; color: #475569; }
-.arrow { color: #cbd5e1; }
-
-/* --- 操作按钮设计 --- */
-.item-ops { display: flex; gap: 10px; }
-.op-btn { border: none; background: #f8fafc; transition: all 0.2s; }
-.op-btn.edit:hover { background: #eff6ff; color: #3b82f6; transform: scale(1.1); }
-.op-btn.delete:hover { background: #fef2f2; color: #ef4444; transform: scale(1.1); }
-
-/* --- 弹窗样式 --- */
-.display-name { 
-  background: #f8fafc; 
-  padding: 10px 15px; 
-  border-radius: 10px; 
-  font-weight: bold; 
-  color: #3b82f6; 
+.item-ops {
+  display: flex;
+  gap: 8px;
 }
+
+.op-btn {
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  transition: all 0.2s;
+}
+
+.op-btn.edit:hover {
+  background: rgba(231, 111, 81, 0.1);
+  color: #E76F51;
+}
+
+.op-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.display-name {
+  background: rgba(231, 111, 81, 0.08);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #E76F51;
+}
+
 .preview-box {
-  margin-top: 15px;
-  padding: 15px;
-  background: #f0fdf4;
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(42, 157, 143, 0.08);
   border-radius: 10px;
   text-align: center;
 }
-.preview-date { font-weight: 900; color: #166534; margin-left: 10px; }
 
-.footer-line { height: 1px; background: #f1f5f9; margin-bottom: 15px; }
-.pdf-footer-modern { text-align: center; padding: 20px 0 40px; color: #94a3b8; font-size: 13px; }
+.preview-date {
+  font-weight: 700;
+  color: #2A9D8F;
+  margin-left: 8px;
+}
+
+.footer-line {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  margin-bottom: 12px;
+}
+
+.pdf-footer-modern {
+  text-align: center;
+  padding: 16px 0 24px;
+  color: #5a6c7d;
+  font-size: 0.875rem;
+}
+
+.modern-dialog :deep(.el-dialog) {
+  border-radius: 16px;
+}
+
+.modern-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #264653;
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #E76F51, #F4A261);
+  border: none;
+}
+
+.btn-confirm:hover {
+  background: linear-gradient(135deg, #d65d3f, #e8914a);
+}
+
+@media (max-width: 768px) {
+  .itinerary-page {
+    padding: 16px;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .day-wrapper {
+    padding: 0 16px 24px;
+  }
+  
+  .day-sticky-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .item-layout {
+    flex-direction: column;
+  }
+  
+  .item-ops {
+    align-self: flex-end;
+  }
+}
 </style>

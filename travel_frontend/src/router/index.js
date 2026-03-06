@@ -84,12 +84,17 @@ const routes = [
     component: () => import('../views/UserManage.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, title: '用户管理' } 
   },
-  // 【新增】：论坛管理路由
   { 
     path: '/forum-manage', 
     name: 'ForumManage', 
     component: () => import('../views/ForumManage.vue'),
     meta: { requiresAuth: true, requiresAdmin: true, title: '论坛管理' } 
+  },
+  { 
+    path: '/banners', 
+    name: 'BannerManage', 
+    component: () => import('../views/BannerManage.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true, title: '轮播图管理' } 
   },
   { 
     path: '/statistics', 
