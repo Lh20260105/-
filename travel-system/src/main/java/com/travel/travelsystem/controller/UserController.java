@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile; // 必须导入
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-
+@CrossOrigin
 @RestController
 @RequestMapping("/api/users")
 public class UserController {

@@ -17,6 +17,19 @@
               <span class="main-title">我的个人行程单</span>
               <span class="sub-title">让每一步旅行都井然有序</span>
             </div>
+         
+          <div class="departure-setter">
+            <span class="setter-label">出发日期：</span>
+            <el-date-picker
+              v-model="startDate"
+            type="date"
+            placeholder="选择出发日"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            @change="handleStartDateChange"
+           class="date-picker-mini"/>
+          </div>                   
+            
             <div class="stat-tag-box">
             <div class="stat-number">{{ totalDays }}</div>
             <div class="stat-label">行程总天数</div>
@@ -276,7 +289,22 @@ const exportToPDF = () => {
 }
 
 onMounted(loadData)
+// ... 其他导入 ...
 
+// 【新增】：修改出发日期的函数
+const handleStartDateChange = async (val) => {
+  if (!val || !userId) return
+  
+  const res = await request.post('/itinerary/update-start-date', {
+    userId: userId,
+    startDate: val
+  })
+  
+  if (res.data.success) {
+    ElMessage.success('出发日期已调整，行程已同步')
+    loadData() // 重新加载，此时 calculateDate 会基于新日期计算
+  }
+}
 
 </script>
 
@@ -706,5 +734,27 @@ onMounted(loadData)
     margin-left: 0;
     margin-top: 10px;
   }
+}
+
+.departure-setter {
+  margin-left: 20px;
+  display: flex;
+  align-items: center;
+  background: rgba(231, 111, 81, 0.1);
+  padding: 5px 15px;
+  border-radius: 10px;
+}
+.setter-label {
+  font-size: 13px;
+  color: #E76F51;
+  font-weight: 600;
+}
+.date-picker-mini {
+  width: 140px !important;
+}
+/* 隐藏边框让它更融入背景 */
+.date-picker-mini :deep(.el-input__wrapper) {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 </style>

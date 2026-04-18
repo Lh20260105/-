@@ -83,6 +83,7 @@ public class ForumController {
         for (ForumPost post : posts) {
             Map<String, Object> map = new HashMap<>();
             map.put("id", post.getId());
+            map.put("userId", post.getUserId());
             map.put("title", post.getTitle());
             map.put("content", post.getContent());
             map.put("imageUrl", post.getImageUrl()); // 【修复】：一定要加上这个，否则广场不显图
@@ -101,6 +102,29 @@ public class ForumController {
             result.add(map);
         }
         return Result.success(result, "获取成功");
+    }
+    /**
+     * 删除接口：增加权限校验
+     * 接收当前操作人的 ID 和角色
+     */
+    @DeleteMapping("/{id}")
+    public Result deletePost(@PathVariable Long id, @RequestParam Long requesterId, @RequestParam String role) {
+        ForumPost post = forumPostService.getById(id);
+        if (post == null) return Result.error("未找到该帖子");
+
+        // 权限校验逻辑
+        if ("ADMIN".equals(role)) {
+            // 1. 如果是管理员，允许删除任何帖子
+            forumPostService.removeById(id);
+            return Result.success(null, "管理员已删除该帖子");
+        } else if (post.getUserId().equals(requesterId)) {
+            // 2. 如果是普通用户，校验帖子是否属于该用户
+            forumPostService.removeById(id);
+            return Result.success(null, "帖子已成功删除");
+        } else {
+            // 3. 否则拒绝操作
+            return Result.error("权限不足，您只能删除自己的帖子");
+        }
     }
 
     /**
@@ -130,19 +154,6 @@ public class ForumController {
             return Result.success(post);
         } else {
             return Result.error("未找到该帖子");
-        }
-    }
-
-    /**
-     * 删除帖子（管理端和用户自己共用）
-     */
-    @DeleteMapping("/{id}")
-    public Result deletePost(@PathVariable Long id) {
-        boolean removed = forumPostService.removeById(id);
-        if (removed) {
-            return Result.success(null, "帖子已成功删除");
-        } else {
-            return Result.error("删除失败，帖子可能已被删除");
         }
     }
 }

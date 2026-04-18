@@ -95,12 +95,19 @@
 
     <el-dialog v-model="itineraryDialogVisible" title="规划我的行程" width="420px" class="itinerary-dialog">
       <el-form :model="itineraryForm" label-position="top" class="itinerary-form">
-        <el-form-item label="计划第几天去">
-          <el-input-number v-model="itineraryForm.dayNumber" :min="1" :max="7" />
-        </el-form-item>
-        <el-form-item label="计划到达时间">
-          <el-time-picker v-model="itineraryForm.startTime" value-format="HH:mm:ss" style="width: 100%"/>
-        </el-form-item>
+        <el-form-item label="计划游玩日期">
+          <el-date-picker
+    v-model="itineraryForm.selectedDate"
+    type="date"
+    placeholder="选择日期"
+    value-format="YYYY-MM-DD"
+    :disabled-date="disabledDate"
+    style="width: 100%"
+  />
+</el-form-item>
+<el-form-item label="计划到达时间">
+  <el-time-picker v-model="itineraryForm.startTime" value-format="HH:mm:ss" style="width: 100%"/>
+</el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="itineraryDialogVisible = false">取消</el-button>
@@ -120,7 +127,16 @@ import { Location, Timer, Calendar, Star, Document, Picture } from '@element-plu
 const route = useRoute()
 const attraction = ref({})
 const itineraryDialogVisible = ref(false)
-const itineraryForm = ref({ startTime: '10:00:00', dayNumber: 1 })
+const itineraryForm = ref({ 
+  startTime: '10:00:00', 
+  selectedDate: new Date().toISOString().split('T')[0] // 默认为今天
+})
+
+// 2. 【新增】：禁止选择今天之前的日期
+const disabledDate = (time) => {
+  // 返回 true 表示禁用。Date.now() - 8.64e7 是为了包含今天
+  return time.getTime() < Date.now() - 8.64e7
+}
 const isCollected = ref(false)
 
 const getUserInfo = () => JSON.parse(sessionStorage.getItem('user_info') || '{}')
@@ -160,18 +176,22 @@ const handleCollect = async () => {
   }
 }
 
+// 3. 修改提交方法
 const submitToItinerary = async () => {
   const userInfo = getUserInfo()
   if (!userInfo.id) {
     ElMessage.warning('请先登录')
     return
   }
+  
+  // 发送选中的具体日期到后端
   const res = await request.post('/itinerary/add-item', {
     userId: userInfo.id,
     attractionId: attraction.value.id,
-    dayNumber: itineraryForm.value.dayNumber,
+    selectedDate: itineraryForm.value.selectedDate, // 传日期
     startTime: itineraryForm.value.startTime
   })
+  
   if (res.data.success) {
     ElMessage.success('已加入行程单！')
     itineraryDialogVisible.value = false

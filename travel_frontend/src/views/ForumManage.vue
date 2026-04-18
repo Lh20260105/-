@@ -93,8 +93,16 @@ const loadPage = async (page = 1) => {
 }
 
 const confirmDel = (id) => {
+  // 从 sessionStorage 获取当前管理员信息
+  const adminInfo = JSON.parse(sessionStorage.getItem('user_info') || '{}')
+  
   ElMessageBox.confirm('确定要删除违规帖子吗？', '管理警告', { type: 'error' }).then(async () => {
-    const res = await request.delete(`/forum/${id}`)
+    const res = await request.delete(`/forum/${id}`, {
+      params: {
+        requesterId: adminInfo.id,
+        role: 'ADMIN' // 显式声明管理员身份
+      }
+    })
     if (res.data.success) {
       ElMessage.success('已删除')
       loadPage(currentPage.value)

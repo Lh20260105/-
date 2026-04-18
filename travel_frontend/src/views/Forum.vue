@@ -38,13 +38,14 @@
               
               <div class="action-area">
                 <span class="post-date">{{ formatDate(post.createTime) }}</span>
-                <el-button 
+               <el-button 
+                  v-if="post.userId === userInfo.id || userInfo.role === 'ADMIN'" 
                   type="danger" 
                   :icon="Delete" 
                   circle 
                   size="small" 
-                  class="del-btn"
-                  @click.stop="handleDelete(post.id)" 
+                 class="del-btn"
+                 @click.stop="handleDelete(post.id)" 
                 />
               </div>
             </div>
@@ -115,21 +116,19 @@ const loadPosts = async () => {
 }
 
 const handleDelete = (id) => {
-  ElMessageBox.confirm(
-    '确定要永久删除这条旅行分享吗？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(async () => {
-    const res = await request.delete(`/forum/${id}`)
+  ElMessageBox.confirm('确定要删除这条旅行分享吗？', '提示', { type: 'warning' }).then(async () => {
+    // 调用删除接口时，传入当前登录人的 ID 和角色（requesterId 和 role）
+    const res = await request.delete(`/forum/${id}`, {
+      params: {
+        requesterId: userInfo.id,
+        role: userInfo.role
+      }
+    })
     if (res.data.success) {
       ElMessage.success('删除成功')
       loadPosts()
     } else {
-      ElMessage.error('删除失败：' + res.data.message)
+      ElMessage.error(res.data.message)
     }
   }).catch(() => {})
 }

@@ -1,7 +1,7 @@
 package com.travel.travelsystem.controller;
 
 import com.travel.travelsystem.common.Result;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -105,59 +105,45 @@ public class FileController {
             throw new IOException("无法读取图片文件");
         }
 
-        // 如果文件已经小于2MB，直接返回原文件
-        if (file.getSize() <= TARGET_SIZE) {
-            return file.getBytes();
-        }
-
-        // 计算压缩比例
-        double scale = Math.sqrt((double) TARGET_SIZE / file.getSize());
-        
-        // 如果压缩比例太激进，限制最小为0.1
-        scale = Math.max(scale, 0.1);
-
-        // 计算新的尺寸
+        // 设定固定压缩比例（例如 0.7）
+        double scale = 0.7;
         int newWidth = (int) (originalImage.getWidth() * scale);
         int newHeight = (int) (originalImage.getHeight() * scale);
-        
-        // 确保最小尺寸
-        newWidth = Math.max(newWidth, 100);
-        newHeight = Math.max(newHeight, 100);
 
-        // 创建压缩后的图片
+        // 创建新画布，注意：此处移除了高质量但耗时的渲染提示
         BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = resizedImage.createGraphics();
-        
-        // 设置高质量渲染
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+        // 使用双线性插值提升速度，弃用耗时的双三次插值（BICUBIC）
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
+
         g2d.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
         g2d.dispose();
 
-        // 转换为字节数组，使用JPEG格式以获得更好的压缩率
+        // 转换为字节数组
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        
-        // 根据原格式选择输出格式
         String formatName = getFormatName(suffix);
-        
+
         if (formatName.equals("jpeg") || formatName.equals("jpg")) {
-            // JPEG格式使用质量压缩
-            compressJpeg(resizedImage, baos);
+            // 仅执行一次固定质量（0.7f）的压缩，不再递归
+            Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpeg");
+            ImageWriter writer = writers.next();
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(0.7f); // 固定 70% 质量
+
+            ImageOutputStream ios = ImageIO.createImageOutputStream(baos);
+            writer.setOutput(ios);
+            writer.write(null, new IIOImage(resizedImage, null, null), param);
+            writer.dispose();
+            ios.close();
         } else {
-            // 其他格式直接写入
             ImageIO.write(resizedImage, formatName, baos);
         }
-        
-        byte[] result = baos.toByteArray();
-        
-        // 如果还是太大，递归压缩
-        if (result.length > TARGET_SIZE) {
-            return recursiveCompress(resizedImage, formatName, 0.8f);
-        }
-        
-        return result;
+
+        // 直接返回结果，不再调用 recursiveCompress
+        return baos.toByteArray();
     }
 
     /**
@@ -225,7 +211,7 @@ public class FileController {
             
             BufferedImage smallerImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
             Graphics2D g2d = smallerImage.createGraphics();
-            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
             g2d.drawImage(image, 0, 0, newWidth, newHeight, null);
             g2d.dispose();
             

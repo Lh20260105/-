@@ -16,4 +16,5 @@ public class ItineraryItem {
     private Integer dayNumber;
     private LocalTime startTime; // 用户计划去的时间
     private Integer stayDays;
+
 }

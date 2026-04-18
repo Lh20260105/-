@@ -64,18 +64,20 @@
         <el-form-item label="开放时间">
           <el-input v-model="form.openTime" placeholder="如：08:00-18:00" />
         </el-form-item>
-        
+
         <el-form-item label="景点照片">
-          <el-upload
-            class="avatar-uploader"
-            action="/api/files/upload"
-            :show-file-list="false"
-            :on-success="handleUploadSuccess"
+        <el-upload
+          class="avatar-uploader"
+          action="/api/files/upload"
+          :show-file-list="false"
+          :on-success="handleUploadSuccess"
+           accept="image/jpeg,image/png,image/gif"
+          :before-upload="beforeAvatarUpload"
           >
-            <img v-if="form.imageUrl" :src="form.imageUrl" class="uploaded-img" />
-            <el-icon v-else class="uploader-icon"><Plus /></el-icon>
-          </el-upload>
-          <div class="upload-tip">建议图片大小不超过 2MB</div>
+        <img v-if="form.imageUrl" :src="form.imageUrl" class="uploaded-img" />
+        <el-icon v-else class="uploader-icon"><Plus /></el-icon>
+         </el-upload>
+         <div class="upload-tip">建议图片大小不超过 2MB，支持 jpg/png/gif</div>
         </el-form-item>
 
         <el-form-item label="景点描述">
@@ -162,6 +164,24 @@ const handleDelete = (id) => {
 }
 
 onMounted(loadData)
+// 在 <script setup> 中添加
+const beforeAvatarUpload = (rawFile) => {
+  // 1. 再次校验格式
+ const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+  if (!allowedTypes.includes(rawFile.type)) {
+    ElMessage.error('上传头像图片只能是 JPG/PNG/GIF 格式!');
+    return false;
+  }
+  
+  // 2. 限制文件大小 (例如 2MB)
+  if (rawFile.size / 1024 / 1024 > 2) {
+    ElMessage.error('上传图片大小不能超过 2MB!');
+    return false;
+  }
+  
+  return true;
+};
+
 </script>
 
 <style scoped>

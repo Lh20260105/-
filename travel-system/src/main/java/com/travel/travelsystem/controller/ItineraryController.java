@@ -85,30 +85,43 @@ public class ItineraryController {
         try {
             Long userId = Long.valueOf(params.get("userId").toString());
             Long attractionId = Long.valueOf(params.get("attractionId").toString());
-            Integer dayNumber = Integer.valueOf(params.get("dayNumber").toString());
             String startTime = params.get("startTime").toString();
-            // 【关键】：接收前端传来的停留天数，默认1天
-            Integer stayDays = params.containsKey("stayDays") ? Integer.valueOf(params.get("stayDays").toString()) : 1;
+            // 1. 接收前端传来的日期字符串
+            LocalDate selectedDate = LocalDate.parse(params.get("selectedDate").toString());
 
-            // 锁定或创建主表
+            // 查找该用户的行程
             Itinerary itinerary = itineraryService.query().eq("user_id", userId).last("limit 1").one();
+
             if (itinerary == null) {
+                // 如果是第一次添加行程，将选中的日期作为整个行程的开始日期
                 itinerary = new Itinerary();
                 itinerary.setUserId(userId);
                 itinerary.setTitle("我的旅行计划");
-                itinerary.setStartDate(LocalDate.now());
+                itinerary.setStartDate(selectedDate); // 设为选中日期
                 itinerary.setCreateTime(LocalDateTime.now());
                 itineraryService.save(itinerary);
             }
 
-            // 创建明细项
+            // 2. 核心逻辑：计算 dayNumber
+            // 规则：(选中日期 - 行程开始日期) + 1。 比如 4.18 出发，选 4.18 就是 Day 1
+            long diff = java.time.temporal.ChronoUnit.DAYS.between(itinerary.getStartDate(), selectedDate);
+            int dayNumber = (int) diff + 1;
+
+            // 如果用户选了一个比行程开始日期更早的日期（通常被前端拦截了，这里做个兜底）
+            if (dayNumber < 1) {
+                // 可选方案：自动更新行程开始日期为更早的这个日期
+                itinerary.setStartDate(selectedDate);
+                itineraryService.updateById(itinerary);
+                dayNumber = 1; // 重置为第一天
+            }
+
+            // 创建行程项
             ItineraryItem item = new ItineraryItem();
             item.setItineraryId(itinerary.getId());
             item.setAttractionId(attractionId);
-            item.setDayNumber(dayNumber);
-            item.setStayDays(stayDays); // 设置停留天数
+            item.setDayNumber(dayNumber); // 设置计算出的天数
+            item.setStayDays(1);
 
-            // 时间转换
             if (startTime.length() == 5) startTime += ":00";
             item.setStartTime(LocalTime.parse(startTime));
 
@@ -141,5 +154,32 @@ public class ItineraryController {
             return Result.success(null, "修改成功");
         }
         return Result.error("修改失败");
+    }
+
+    /**
+     * 5. 更新整个行程的开始日期
+     * 对应前端：/api/itinerary/update-start-date
+     */
+    @PostMapping("/update-start-date")
+    public Result<Object> updateStartDate(@RequestBody Map<String, Object> params) {
+        try {
+            Long userId = Long.valueOf(params.get("userId").toString());
+            String newDate = params.get("startDate").toString(); // 格式：2026-04-18
+
+            // 找到该用户最新的行程记录
+            Itinerary itinerary = itineraryService.query()
+                    .eq("user_id", userId)
+                    .last("limit 1")
+                    .one();
+
+            if (itinerary != null) {
+                itinerary.setStartDate(LocalDate.parse(newDate));
+                itineraryService.updateById(itinerary);
+                return Result.success(null, "出发日期已更新");
+            }
+            return Result.error("未找到行程计划");
+        } catch (Exception e) {
+            return Result.error("日期更新失败: " + e.getMessage());
+        }
     }
 }
