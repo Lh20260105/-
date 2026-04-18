@@ -18,22 +18,11 @@
               <span class="sub-title">让每一步旅行都井然有序</span>
             </div>
          
-          <div class="departure-setter">
-            <span class="setter-label">出发日期：</span>
-            <el-date-picker
-              v-model="startDate"
-            type="date"
-            placeholder="选择出发日"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD"
-            @change="handleStartDateChange"
-           class="date-picker-mini"/>
-          </div>                   
+         
             
             <div class="stat-tag-box">
-            <div class="stat-number">{{ totalDays }}</div>
-            <div class="stat-label">行程总天数</div>
-            </div>
+  <div class="stat-number">{{ totalDays }}</div> <div class="stat-label">行程总天数</div>
+</div>
           
           </div>
           <el-button v-if="itineraryItems.length > 0" class="btn-export-modern" @click="exportToPDF">
@@ -170,19 +159,24 @@ import { Calendar, Location, Delete, Download, Edit, PartlyCloudy } from '@eleme
 const itineraryItems = ref([]) 
 
 
+//
+/**
+ * 【最终修复版】：计算行程总天数
+ * 逻辑：直接获取 sortedDays 数组的长度，你有几站，它就是几天
+ */
+// 计算整个行程的跨度天数
 const totalDays = computed(() => {
-  // 1. 如果行程单里没东西，显示 0
-  if (!itineraryItems.value || itineraryItems.value.length === 0) {
-    return 0
-  }
+  if (itineraryItems.value.length === 0) return 0;
   
-  // 2. 获取所有行程项的 dayNumber（第几天）
-  // 比如你安排了 Day 1, Day 2, Day 4
-  const dayNumbers = itineraryItems.value.map(item => item.dayNumber)
+  let maxDay = 0;
+  itineraryItems.value.forEach(item => {
+    // 结束天 = 开始天 + 停留天数 - 1
+    const endDay = item.dayNumber + (item.stayDays - 1);
+    if (endDay > maxDay) maxDay = endDay;
+  });
   
-  // 3. 取其中的最大值。这样如果你排到了 Day 4，总天数就是 4
-  return Math.max(...dayNumbers)
-})
+  return maxDay;
+});
 const startDate = ref('') 
 const weatherData = ref({}) 
 const userInfo = JSON.parse(sessionStorage.getItem('user_info') || '{}')
@@ -211,7 +205,9 @@ const calculateDate = (dayNum) => {
 const calculateDeparture = (arrivalDay, stayDuration) => {
   if (!startDate.value) return ''
   const date = new Date(startDate.value)
-  date.setDate(date.getDate() + (arrivalDay - 1) + (stayDuration || 1))
+  // 逻辑调整：如果 stayDuration 为 1，代表当天入住当天结算，或按实际业务需求改为 + stayDuration
+  // 修复：确保天数累加逻辑与您的业务定义一致
+  date.setDate(date.getDate() + (arrivalDay - 1) + (stayDuration || 1));
   return date.toLocaleDateString()
 }
 
@@ -235,7 +231,23 @@ const calculatedDeparturePreview = computed(() => {
   return departure.toLocaleDateString()
 })
 
-const sortedDays = computed(() => [...new Set(itineraryItems.value.map(item => item.dayNumber))].sort((a, b) => a - b))
+// 只提取真实存在的日期，实现“跳过”无数据天数
+const sortedDays = computed(() => [...new Set(itineraryItems.value.map(item => item.dayNumber))].sort((a, b) => a - b));
+
+// 【新增】：数字转中文序号的逻辑
+const getChineseNumber = (num) => {
+  const chineseMap = {
+    1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 
+    6: '六', 7: '七', 8: '八', 9: '九', 10: '十'
+  }
+  // 处理 11-20 等更多天数的情况（可选）
+  if (num > 10) {
+    if (num < 20) return '十' + (chineseMap[num % 10] || '')
+    if (num === 20) return '二十'
+    return num // 超过20天直接返回数字
+  }
+  return chineseMap[num] || num
+}
 const getItemsByDay = (day) => itineraryItems.value.filter(item => item.dayNumber === day)
 
 const openEditDialog = (item) => {
@@ -256,8 +268,13 @@ const submitEdit = async () => {
   const selected = new Date(editForm.value.fullDateTime)
   const start = new Date(startDate.value)
   if (selected < start) return ElMessage.error('时间超前了')
-  const dayNumber = Math.floor((selected - start) / (1000 * 60 * 60 * 24)) + 1
-  const startTime = `${String(selected.getHours()).padStart(2, '0')}:${String(selected.getMinutes()).padStart(2, '0')}:00`
+  
+  // 修复：使用更稳健的天数差计算方式，确保不会因为小时数微差导致降级
+  const diffTime = selected.setHours(0,0,0,0) - start.setHours(0,0,0,0);
+  const dayNumber = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  
+  const startTime = `${String(new Date(editForm.value.fullDateTime).getHours()).padStart(2, '0')}:${String(new Date(editForm.value.fullDateTime).getMinutes()).padStart(2, '0')}:00`
+  
   const res = await request.post('/itinerary/update-item', {
     id: editForm.value.id,
     dayNumber: dayNumber,
@@ -289,23 +306,6 @@ const exportToPDF = () => {
 }
 
 onMounted(loadData)
-// ... 其他导入 ...
-
-// 【新增】：修改出发日期的函数
-const handleStartDateChange = async (val) => {
-  if (!val || !userId) return
-  
-  const res = await request.post('/itinerary/update-start-date', {
-    userId: userId,
-    startDate: val
-  })
-  
-  if (res.data.success) {
-    ElMessage.success('出发日期已调整，行程已同步')
-    loadData() // 重新加载，此时 calculateDate 会基于新日期计算
-  }
-}
-
 </script>
 
 <style scoped>
@@ -736,25 +736,5 @@ const handleStartDateChange = async (val) => {
   }
 }
 
-.departure-setter {
-  margin-left: 20px;
-  display: flex;
-  align-items: center;
-  background: rgba(231, 111, 81, 0.1);
-  padding: 5px 15px;
-  border-radius: 10px;
-}
-.setter-label {
-  font-size: 13px;
-  color: #E76F51;
-  font-weight: 600;
-}
-.date-picker-mini {
-  width: 140px !important;
-}
-/* 隐藏边框让它更融入背景 */
-.date-picker-mini :deep(.el-input__wrapper) {
-  background: transparent !important;
-  box-shadow: none !important;
-}
+
 </style>
