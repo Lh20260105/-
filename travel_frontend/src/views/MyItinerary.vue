@@ -17,6 +17,11 @@
               <span class="main-title">我的个人行程单</span>
               <span class="sub-title">让每一步旅行都井然有序</span>
             </div>
+            <div class="stat-tag-box">
+            <div class="stat-number">{{ totalDays }}</div>
+            <div class="stat-label">行程总天数</div>
+            </div>
+          
           </div>
           <el-button v-if="itineraryItems.length > 0" class="btn-export-modern" @click="exportToPDF">
             <el-icon><Download /></el-icon>
@@ -150,6 +155,21 @@ import html2pdf from 'html2pdf.js'
 import { Calendar, Location, Delete, Download, Edit, PartlyCloudy } from '@element-plus/icons-vue'
 
 const itineraryItems = ref([]) 
+
+
+const totalDays = computed(() => {
+  // 1. 如果行程单里没东西，显示 0
+  if (!itineraryItems.value || itineraryItems.value.length === 0) {
+    return 0
+  }
+  
+  // 2. 获取所有行程项的 dayNumber（第几天）
+  // 比如你安排了 Day 1, Day 2, Day 4
+  const dayNumbers = itineraryItems.value.map(item => item.dayNumber)
+  
+  // 3. 取其中的最大值。这样如果你排到了 Day 4，总天数就是 4
+  return Math.max(...dayNumbers)
+})
 const startDate = ref('') 
 const weatherData = ref({}) 
 const userInfo = JSON.parse(sessionStorage.getItem('user_info') || '{}')
@@ -256,6 +276,8 @@ const exportToPDF = () => {
 }
 
 onMounted(loadData)
+
+
 </script>
 
 <style scoped>
@@ -649,6 +671,40 @@ onMounted(loadData)
   
   .item-ops {
     align-self: flex-end;
+  }
+}
+.stat-tag-box {
+  background: linear-gradient(135deg, #264653, #2a9d8f);
+  padding: 8px 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  margin-left: 20px;
+  box-shadow: 0 4px 12px rgba(38, 70, 83, 0.2);
+}
+
+.stat-number {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.stat-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* 适配移动端 */
+@media (max-width: 768px) {
+  .stat-tag-box {
+    margin-left: 0;
+    margin-top: 10px;
   }
 }
 </style>
