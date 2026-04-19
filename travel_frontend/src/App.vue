@@ -111,6 +111,10 @@
                   <el-icon><UserFilled /></el-icon>
                   <span>个人中心</span>
                 </router-link>
+                <router-link v-if="isAdminRole" to="/statistics" class="nav-item admin-nav-portal" >
+                  <el-icon><Monitor /></el-icon>
+                   <span>管理后台</span>
+                 </router-link>
               </div>
               
               <!-- 用户信息 -->
@@ -155,7 +159,7 @@ import {
 
 const router = useRouter()
 const route = useRoute()
-
+const userInfo = ref(JSON.parse(sessionStorage.getItem('user_info') || '{}'))
 const user = computed(() => userState.userInfo)
 
 // 判断当前是否在管理员页面（根据路由路径）
@@ -212,6 +216,7 @@ const handleBackToHome = () => {
 </script>
 
 <style>
+
 body { 
   margin: 0; 
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -787,6 +792,27 @@ body {
   
   .brand-text {
     display: none;
+  }
+}
+/* 管理后台入口的特殊样式 */
+.admin-nav-portal {
+  margin-left: 12px;
+  background: rgba(231, 111, 81, 0.1) !important;
+  color: #E76F51 !important;
+  border: 1px solid rgba(231, 111, 81, 0.2) !important;
+  font-weight: 600 !important;
+}
+
+.admin-nav-portal:hover {
+  background: #E76F51 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(231, 111, 81, 0.2);
+}
+
+/* 确保在窄屏幕下也隐藏，防止导航栏挤爆 */
+@media (max-width: 1200px) {
+  .admin-nav-portal span {
+    display: none; /* 屏幕稍小时只显示图标 */
   }
 }
 </style>
